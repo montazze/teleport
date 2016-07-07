@@ -109,6 +109,7 @@ func NewInstance(siteName string, hostName string, ports []int, priv, pub []byte
 		Secrets:  secrets,
 		Ports:    ports,
 		Hostname: hostName,
+		Config:   service.MakeDefaultConfig(),
 	}
 }
 
@@ -191,14 +192,15 @@ func (i *TeleInstance) GetSiteAPI(siteName string) auth.ClientI {
 
 // Create creates a new instance of Teleport which trusts a lsit of other clusters (other
 // instances)
-func (i *TeleInstance) Create(trustedSecrets []*InstanceSecrets, enableSSH bool, console io.Writer) error {
-	dataDir, err := ioutil.TempDir("", "cluster-"+i.Secrets.SiteName)
-	if err != nil {
-		return err
+func (i *TeleInstance) Create(trustedSecrets []*InstanceSecrets, enableSSH bool, console io.Writer) (err error) {
+	tconf := i.Config
+	if tconf.DataDir == defaults.DataDir {
+		tconf.DataDir, err = ioutil.TempDir("", "cluster-"+i.Secrets.SiteName)
+		if err != nil {
+			return err
+		}
 	}
-	tconf := service.MakeDefaultConfig()
 	tconf.SeedConfig = true
-	tconf.DataDir = dataDir
 	tconf.Console = console
 	tconf.Auth.DomainName = i.Secrets.SiteName
 	tconf.Auth.Authorities = append(tconf.Auth.Authorities, i.Secrets.GetCAs()...)
@@ -226,7 +228,6 @@ func (i *TeleInstance) Create(trustedSecrets []*InstanceSecrets, enableSSH bool,
 	tconf.AuthServers = append(tconf.AuthServers, tconf.Auth.SSHAddr)
 	tconf.ConfigureBolt()
 	tconf.Keygen = testauthority.New()
-	i.Config = tconf
 	i.Process, err = service.NewTeleport(tconf)
 	if err != nil {
 		return err
