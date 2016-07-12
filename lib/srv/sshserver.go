@@ -350,6 +350,7 @@ func (s *Server) getCommandLabels() map[string]services.CommandLabel {
 }
 
 func (s *Server) checkPermissionToLogin(cert ssh.PublicKey, teleportUser, osUser string) error {
+	log.Warningf("DEBUG: checkPermissionToLogin: teleportUser=%v, osUser=%v", teleportUser, osUser)
 	// find cert authority by it's key
 	cas, err := s.authService.GetCertAuthorities(services.UserCA, false)
 	if err != nil {
@@ -369,23 +370,26 @@ func (s *Server) checkPermissionToLogin(cert ssh.PublicKey, teleportUser, osUser
 			}
 		}
 	}
-
 	if ca == nil {
 		return trace.NotFound("not found authority for key %v", teleportUser)
 	}
+	log.Warningf("DEBUG: ca=%v, ca.DomainName=%v, ca.AllowedLogins=%v", ca, ca.DomainName, ca.AllowedLogins)
 
 	localDomain, err := s.authService.GetLocalDomain()
 	if err != nil {
 		return trace.Wrap(err)
 	}
+	log.Warningf("DEBUG: localDomain=%v", localDomain)
 
 	// for local users, go and check their individual permissions
 	if localDomain == ca.DomainName {
 		users, err := s.authService.GetUsers()
+		log.Warningf("DEBUG: users=%v", users)
 		if err != nil {
 			return trace.Wrap(err)
 		}
 		for _, u := range users {
+			log.Warningf("DEBUG: u.Name=%v", u.GetName())
 			if u.GetName() == teleportUser {
 				for _, login := range u.GetAllowedLogins() {
 					if login == osUser {
@@ -405,6 +409,7 @@ func (s *Server) checkPermissionToLogin(cert ssh.PublicKey, teleportUser, osUser
 			return nil
 		}
 	}
+	log.Warningf("DEBUG: not found user entry")
 	return trace.NotFound(
 		"not found user entry for %v and os user %v for remote authority %v",
 		teleportUser, osUser, ca.ID())
