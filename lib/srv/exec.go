@@ -114,6 +114,13 @@ func prepareShell(ctx *ctx) (*exec.Cmd, error) {
 	return c, nil
 }
 
+// getDefaultEnvPath returns the default value of PATH environment variable for
+// new logins (prior to shell)
+func getDefaultEnvPath() string {
+	// TODO (read /etc/login.defs file)
+	return "/usr/local/bin:/usr/bin:/bin:"
+}
+
 // prepareCommand configures exec.Cmd for executing a given command within an SSH
 // session.
 //
@@ -166,9 +173,11 @@ func prepareCommand(ctx *ctx, cmd string) (*exec.Cmd, error) {
 	}
 	c.Env = []string{
 		"TERM=xterm",
+		"PATH=" + getDefaultEnvPath(),
 		"LANG=en_US.UTF-8",
 		"HOME=" + osUser.HomeDir,
 		"USER=" + osUserName,
+		"PATH=/bin:/usr/bin",
 		"SHELL=" + shell,
 		"SSH_TELEPORT_USER=" + ctx.teleportUser,
 		fmt.Sprintf("SSH_SESSION_WEBPROXY_ADDR=%s:3080", proxyHost),
