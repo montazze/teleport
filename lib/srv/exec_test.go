@@ -51,14 +51,15 @@ func (s *ExecSuite) SetUpSuite(c *check.C) {
 }
 
 func (s *ExecSuite) TestLoginDefsParser(c *check.C) {
-	c.Assert(getDefaultEnvPath("../../fixtures/login.defs"), check.Equals, "PATH=/usr/local/bin:/usr/bin:/bin:/foo")
-	c.Assert(getDefaultEnvPath("bad/file"), check.Equals, "PATH=")
+	c.Assert(getDefaultEnvPath("0", "../../fixtures/login.defs"), check.Equals, "PATH=/usr/local/sbin:/bar")
+	c.Assert(getDefaultEnvPath("1000", "../../fixtures/login.defs"), check.Equals, "PATH=/usr/local/bin:/usr/bin:/bin:/foo")
+	c.Assert(getDefaultEnvPath("0", "bad/file"), check.Equals, "PATH=/bin:/usr/bin")
 }
 
 func (s *ExecSuite) TestOSCommandPrep(c *check.C) {
 	expectedEnv := []string{
 		"TERM=xterm",
-		getDefaultEnvPath(""),
+		getDefaultEnvPath("1000", "/etc/login.defs"),
 		"LANG=en_US.UTF-8",
 		fmt.Sprintf("HOME=%s", s.usr.HomeDir),
 		fmt.Sprintf("USER=%s", s.usr.Username),

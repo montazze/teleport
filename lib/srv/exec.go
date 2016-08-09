@@ -123,8 +123,8 @@ func prepareShell(ctx *ctx) (*exec.Cmd, error) {
 // but for unit testing it takes any file
 //
 // Returns a strings which looks like "PATH=/usr/bin:/bin"
-func getDefaultEnvPath(loginDefsPath string) string {
-	const emptyPath = "PATH="
+func getDefaultEnvPath(uid, loginDefsPath string) string {
+	const emptyPath = "PATH=/bin:/usr/bin"
 	if loginDefsPath == "" {
 		loginDefsPath = "/etc/login.defs"
 	}
@@ -135,6 +135,11 @@ func getDefaultEnvPath(loginDefsPath string) string {
 	}
 	defer f.Close()
 
+	varname := "ENV_PATH"
+	if uid == "0" {
+		varname = "ENV_SUPATH"
+	}
+
 	// read /etc/login.defs line by line:
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
@@ -144,7 +149,7 @@ func getDefaultEnvPath(loginDefsPath string) string {
 			continue
 		}
 		fields := strings.Fields(line)
-		if len(fields) > 1 && fields[0] == "ENV_PATH" {
+		if len(fields) > 1 && fields[0] == varname {
 			return strings.TrimSpace(fields[1])
 		}
 	}
@@ -203,7 +208,7 @@ func prepareCommand(ctx *ctx, cmd string) (*exec.Cmd, error) {
 	}
 	c.Env = []string{
 		"TERM=xterm",
-		getDefaultEnvPath(""),
+		getDefaultEnvPath(osUser.Uid, ""),
 		"LANG=en_US.UTF-8",
 		"HOME=" + osUser.HomeDir,
 		"USER=" + osUserName,
