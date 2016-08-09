@@ -50,9 +50,15 @@ func (s *ExecSuite) SetUpSuite(c *check.C) {
 	s.remoteAddr, _ = utils.ParseAddr("10.0.0.5:4817")
 }
 
+func (s *ExecSuite) TestLoginDefsParser(c *check.C) {
+	c.Assert(getDefaultEnvPath("../../fixtures/login.defs"), check.Equals, "PATH=/usr/local/bin:/usr/bin:/bin:/foo")
+	c.Assert(getDefaultEnvPath("bad/file"), check.Equals, "PATH=")
+}
+
 func (s *ExecSuite) TestOSCommandPrep(c *check.C) {
 	expectedEnv := []string{
 		"TERM=xterm",
+		getDefaultEnvPath(""),
 		"LANG=en_US.UTF-8",
 		fmt.Sprintf("HOME=%s", s.usr.HomeDir),
 		fmt.Sprintf("USER=%s", s.usr.Username),

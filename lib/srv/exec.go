@@ -17,9 +17,11 @@ limitations under the License.
 package srv
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"net"
+	"os"
 	"os/exec"
 	"os/user"
 	"path/filepath"
@@ -116,9 +118,37 @@ func prepareShell(ctx *ctx) (*exec.Cmd, error) {
 
 // getDefaultEnvPath returns the default value of PATH environment variable for
 // new logins (prior to shell)
-func getDefaultEnvPath() string {
-	// TODO (read /etc/login.defs file)
-	return "/usr/local/bin:/usr/bin:/bin:"
+//
+// Normally getDefaultEnvPath is set to "" (default /etc/login.defs is used)
+// but for unit testing it takes any file
+//
+// Returns a strings which looks like "PATH=/usr/bin:/bin"
+func getDefaultEnvPath(loginDefsPath string) string {
+	const emptyPath = "PATH="
+	if loginDefsPath == "" {
+		loginDefsPath = "/etc/login.defs"
+	}
+	f, err := os.Open(loginDefsPath)
+	if err != nil {
+		log.Warn(err)
+		return emptyPath
+	}
+	defer f.Close()
+
+	// read /etc/login.defs line by line:
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		// skip comments and empty lines:
+		if line == "" || line[0] == '#' {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) > 1 && fields[0] == "ENV_PATH" {
+			return strings.TrimSpace(fields[1])
+		}
+	}
+	return emptyPath
 }
 
 // prepareCommand configures exec.Cmd for executing a given command within an SSH
@@ -173,11 +203,10 @@ func prepareCommand(ctx *ctx, cmd string) (*exec.Cmd, error) {
 	}
 	c.Env = []string{
 		"TERM=xterm",
-		"PATH=" + getDefaultEnvPath(),
+		getDefaultEnvPath(""),
 		"LANG=en_US.UTF-8",
 		"HOME=" + osUser.HomeDir,
 		"USER=" + osUserName,
-		"PATH=/bin:/usr/bin",
 		"SHELL=" + shell,
 		"SSH_TELEPORT_USER=" + ctx.teleportUser,
 		fmt.Sprintf("SSH_SESSION_WEBPROXY_ADDR=%s:3080", proxyHost),
